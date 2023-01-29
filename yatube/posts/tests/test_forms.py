@@ -1,7 +1,5 @@
 from django.test import Client, TestCase
 from django.urls import reverse
-from django import forms
-from django.urls import reverse
 
 from posts.models import Group, Post, User
 
@@ -41,6 +39,8 @@ class PostCreateFormTests(TestCase):
         self.assertRedirects(response, reverse('posts:profile',
                              kwargs={'username': PostCreateFormTests.user}))
         self.assertEqual(Post.objects.count(), posts_count + 1)
+        self.assertContains(response, form_data['text'])
+        self.assertContains(response, form_data['group'])
         self.assertTrue(
             Post.objects.filter(
                 text=form_data['text'],
