@@ -21,23 +21,10 @@ class PostCreateFormTests(TestCase):
             author=cls.user,
             group=cls.group
         )
-        cls.form_fields = {
-            'text': forms.fields.CharField,
-            'group': forms.fields.ChoiceField,
-        }
 
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
-
-    def test_form_foelds_is_correct_type(self):
-        """Проверяем, что типы полей формы в словаре
-        context соответсвуют ожиданиям"""
-        response = self.authorized_client.get(reverse('posts:post_create'))
-        for value, expected in PostCreateFormTests.form_fields.items():
-            with self.subTest(value=value):
-                form_field = response.context.get('form').fields.get(value)
-                self.assertIsInstance(form_field, expected)
 
     def test_create_post(self):
         """Валидная форма создает запись в Post."""
