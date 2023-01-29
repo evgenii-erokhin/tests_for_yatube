@@ -1,16 +1,16 @@
-from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
-from posts.models import Group, Post
+from django import forms
+from django.urls import reverse
 
-User = get_user_model()
+from posts.models import Group, Post, User
 
 
 class PostCreateFormTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create(username='user')
+        cls.user = User.objects.create_user(username='user')
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -21,16 +21,30 @@ class PostCreateFormTests(TestCase):
             author=cls.user,
             group=cls.group
         )
+        cls.form_fields = {
+            'text': forms.fields.CharField,
+            'group': forms.fields.ChoiceField,
+        }
 
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
+
+    def test_form_foelds_is_correct_type(self):
+        """Проверяем, что типы полей формы в словаре
+        context соответсвуют ожиданиям"""
+        response = self.authorized_client.get(reverse('posts:post_create'))
+        for value, expected in PostCreateFormTests.form_fields.items():
+            with self.subTest(value=value):
+                form_field = response.context.get('form').fields.get(value)
+                self.assertIsInstance(form_field, expected)
 
     def test_create_post(self):
         """Валидная форма создает запись в Post."""
         posts_count = Post.objects.count()
         form_data = {
             'text': 'Тестовый текст',
+            'group': PostCreateFormTests.group.id,
         }
         response = self.authorized_client.post(
             reverse('posts:post_create'),
@@ -38,8 +52,15 @@ class PostCreateFormTests(TestCase):
             follow=True
         )
         self.assertRedirects(response, reverse('posts:profile',
-                             kwargs={'username': self.user.username}))
+                             kwargs={'username': PostCreateFormTests.user}))
         self.assertEqual(Post.objects.count(), posts_count + 1)
+        self.assertTrue(
+            Post.objects.filter(
+                text=form_data['text'],
+                author=PostCreateFormTests.user,
+                group=form_data['group']
+            ).exists()
+        )
 
 
 class PostEditFormTests(TestCase):
@@ -66,6 +87,8 @@ class PostEditFormTests(TestCase):
         """Валидная форма редактирует запись в Post."""
         form_data = {
             'text': 'Отредактированый текст',
+            'group': PostEditFormTests.group.id,
+
         }
         response = self.authorized_client.post(
             reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
@@ -74,4 +97,5 @@ class PostEditFormTests(TestCase):
         )
         self.assertRedirects(response, reverse('posts:post_detail',
                              kwargs={'post_id': self.post.id}))
-        self.assertContains(response, 'Отредактированый текст')
+        self.assertContains(response, form_data['text'])
+        self.assertContains(response, form_data['group'])

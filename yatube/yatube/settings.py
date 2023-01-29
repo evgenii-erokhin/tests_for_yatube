@@ -142,9 +142,6 @@ LOGIN_URL = 'users:login'
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
 
-NUM_VIS_SYMB = 15
+NUM_VIS_SYMB = 50
 
-TEST_PAG_10 = 10
-TEST_PAG_3 = 3
-
-NUM_OF_POSTS_TEST = 14
+NUM_OF_POSTS_TEST = 13
