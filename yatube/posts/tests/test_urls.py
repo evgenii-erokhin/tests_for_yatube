@@ -20,12 +20,12 @@ class PostURLTests(TestCase):
             author=cls.author,
             group=cls.group
         )
-        cls.private_ref = {
+        cls.private_reference = {
             f'/posts/{PostURLTests.post.id}/edit/': (('posts/create_post.html',
                                                       HTTPStatus.OK)),
             '/create/': ('posts/create_post.html', HTTPStatus.OK),
         }
-        cls.public_ref = {
+        cls.public_reference = {
             '/': ('posts/index.html', HTTPStatus.OK),
             f'/group/{PostURLTests.group.slug}/': (('posts/group_list.html',
                                                     HTTPStatus.OK)),
@@ -45,28 +45,28 @@ class PostURLTests(TestCase):
 
     def test_public_templates_url_at_desired_location(self):
         """Проверка доступности URL адресов для любого пользователя"""
-        for url, status in PostURLTests.public_ref.items():
+        for url, status in PostURLTests.public_reference.items():
             response = self.guest_client.get(url)
             with self.subTest(url=url):
                 self.assertEqual(response.status_code, status[1])
 
     def test_public_templates_url_usses_correct_template(self):
         """Проверка доступности шаблонов для любого пользователя """
-        for url, templates in PostURLTests.public_ref.items():
+        for url, templates in PostURLTests.public_reference.items():
             response = self.guest_client.get(url)
             with self.subTest(url=url):
                 self.assertTemplateUsed(response, templates[0])
 
     def test_private_templates_url_at_desired_location(self):
         """Проверка доступности URL адресов для авторизованого пользователя"""
-        for url, status in PostURLTests.private_ref.items():
+        for url, status in PostURLTests.private_reference.items():
             response = self.authorized_author.get(url)
             with self.subTest(url=url):
                 self.assertEqual(response.status_code, status[1])
 
     def test_public_templates_url_usses_correct_template(self):
         """Проверка доступности шаблонов для авторизованого пользователя """
-        for url, templates in PostURLTests.private_ref.items():
+        for url, templates in PostURLTests.private_reference.items():
             response = self.authorized_author.get(url)
             with self.subTest(url=url):
                 self.assertTemplateUsed(response, templates[0])

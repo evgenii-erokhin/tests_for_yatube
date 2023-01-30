@@ -36,18 +36,12 @@ class PostCreateFormTests(TestCase):
             data=form_data,
             follow=True
         )
+        new_post = Post.objects.last()
         self.assertRedirects(response, reverse('posts:profile',
                              kwargs={'username': PostCreateFormTests.user}))
         self.assertEqual(Post.objects.count(), posts_count + 1)
-        self.assertContains(response, form_data['text'])
-        self.assertContains(response, form_data['group'])
-        self.assertTrue(
-            Post.objects.filter(
-                text=form_data['text'],
-                author=PostCreateFormTests.user,
-                group=form_data['group']
-            ).exists()
-        )
+        self.assertEqual(new_post.text, form_data['text'])
+        self.assertEqual(new_post.group.id, form_data['group'])
 
 
 class PostEditFormTests(TestCase):
@@ -72,9 +66,14 @@ class PostEditFormTests(TestCase):
 
     def test_edit_post(self):
         """Валидная форма редактирует запись в Post."""
+        group_another = Group.objects.create(
+            title='Новая группа',
+            slug='test-slug-2',
+            description='Еще одно тестовое описание группы'
+        )
         form_data = {
             'text': 'Отредактированый текст',
-            'group': PostEditFormTests.group.id,
+            'group': group_another.id,
 
         }
         response = self.authorized_client.post(
@@ -82,7 +81,8 @@ class PostEditFormTests(TestCase):
             data=form_data,
             follow=True
         )
+        edit_post = Post.objects.last()
         self.assertRedirects(response, reverse('posts:post_detail',
                              kwargs={'post_id': self.post.id}))
-        self.assertContains(response, form_data['text'])
-        self.assertContains(response, form_data['group'])
+        self.assertEqual(edit_post.text, form_data['text'])
+        self.assertEqual(edit_post.group.id, form_data['group'])

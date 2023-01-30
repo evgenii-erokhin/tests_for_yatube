@@ -24,18 +24,21 @@ class PostPagesTest(TestCase):
             author=cls.author,
             group=cls.group
         )
-        cls.private_ref = (
-            reverse('posts:post_create'),
+        cls.private_reference = {
+            reverse('posts:post_create'): 'posts/create_post.html',
             reverse('posts:post_edit',
-                    kwargs={'post_id': PostPagesTest.post.id}),
-        )
-        cls.public_ref = (
-            reverse('posts:index'),
+                    kwargs={'post_id': PostPagesTest.post.id}):
+                   ('posts/create_post.html'),
+        }
+        cls.public_reference = {
+            reverse('posts:index'): 'posts/index.html',
             reverse('posts:group_list',
-                    kwargs={'slug': f'{PostPagesTest.group.slug}'}),
+                    kwargs={'slug': f'{PostPagesTest.group.slug}'}):
+                   ('posts/group_list.html'),
             reverse('posts:profile',
-                    kwargs={'username': f'{PostPagesTest.author}'}),
-        )
+                    kwargs={'username': f'{PostPagesTest.author}'}):
+                   ('posts/profile.html'),
+        }
 
     def setUp(self):
         self.guest_client = Client()
@@ -44,23 +47,7 @@ class PostPagesTest(TestCase):
 
     def test_pages_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
-        templates_pages_names = {
-            reverse('posts:index'): 'posts/index.html',
-            reverse('posts:group_list',
-                    kwargs={'slug': f'{PostPagesTest.group.slug}'}):
-                   ('posts/group_list.html'),
-            reverse('posts:profile',
-                    kwargs={'username': f'{PostPagesTest.user}'}):
-                   ('posts/profile.html'),
-            reverse('posts:post_detail', kwargs={'post_id': self.post.id}): (
-                'posts/post_detail.html'
-            ),
-            reverse('posts:post_create'): 'posts/create_post.html',
-            reverse('posts:post_edit', kwargs={'post_id': self.post.id}): (
-                'posts/create_post.html'
-            ),
-        }
-        for reverse_name, template in templates_pages_names.items():
+        for reverse_name, template in PostPagesTest.public_reference.items():
             with self.subTest(reverse_name=reverse_name):
                 response = self.authorized_client.get(reverse_name)
                 self.assertTemplateUsed(response, template)
@@ -68,7 +55,7 @@ class PostPagesTest(TestCase):
     def test_public_views_show_correct_context(self):
         """Проверка, что вью функции для общедоступных страниц
            передают корректный контекст"""
-        for revers_name in PostPagesTest.public_ref:
+        for revers_name in PostPagesTest.public_reference.keys():
             with self.subTest(revers_name=revers_name):
                 response = self.guest_client.get(revers_name)
                 for post in response.context['page_obj']:
@@ -86,7 +73,7 @@ class PostPagesTest(TestCase):
             'text': forms.fields.CharField,
             'group': forms.fields.ChoiceField,
         }
-        for revers_name in PostPagesTest.private_ref:
+        for revers_name in PostPagesTest.private_reference.keys():
             with self.subTest(revers_name=revers_name):
                 response = self.authorized_client.get(revers_name)
                 for field, type in form_fields.items():
@@ -106,15 +93,7 @@ class PostPagesTest(TestCase):
     def test_post_show_correct(self):
         """Проверка, что созданый пост появляется
            на нужных страницах"""
-        name_pages = [
-            reverse('posts:index'),
-            reverse('posts:group_list',
-                    kwargs={'slug': PostPagesTest.group.slug}),
-            reverse('posts:profile',
-                    kwargs={'username': PostPagesTest.author.username})
-        ]
-
-        for page in name_pages:
+        for page in PostPagesTest.public_reference.keys():
             with self.subTest(page=page):
                 response = self.authorized_client.get(page)
                 self.assertIn(PostPagesTest.post, response.context['page_obj'])
