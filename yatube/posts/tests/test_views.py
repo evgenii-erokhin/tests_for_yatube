@@ -1,13 +1,20 @@
+import shutil
+import tempfile
+
 from django import forms
 from django.conf import settings
-from django.test import Client, TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from posts.models import Group, Post, User
+from posts.models import Comment, Group, Post, User
+
+TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 TEST_PAG_3 = 3
 
 
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PostPagesTest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -19,10 +26,30 @@ class PostPagesTest(TestCase):
             slug='test-slug',
             description='Тестовое описание группы'
         )
+        small_gif = (
+            b'\x47\x49\x46\x38\x39\x61\x02\x00'
+            b'\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+            b'\x0A\x00\x3B'
+        )
+        uploaded = SimpleUploadedFile(
+            name='small.gif',
+            content=small_gif,
+            content_type='image/gif'
+        )
+
         cls.post = Post.objects.create(
             text='Тестовый текст',
             author=cls.author,
-            group=cls.group
+            group=cls.group,
+            image=uploaded
+        )
+        cls.comment = Comment.objects.create(
+            text='Тестовый комментарий',
+            post=cls.post,
+            author=cls.user,
         )
         cls.private_reference = {
             reverse('posts:post_create'): 'posts/create_post.html',
@@ -40,10 +67,17 @@ class PostPagesTest(TestCase):
                    ('posts/profile.html'),
         }
 
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
+
     def setUp(self):
         self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.author)
+        self.authorized_user = Client()
+        self.authorized_user.force_login(self.user)
 
     def test_pages_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
@@ -65,6 +99,7 @@ class PostPagesTest(TestCase):
                 self.assertEqual(first_post.text, PostPagesTest.post.text)
                 self.assertEqual(first_post.group, PostPagesTest.post.group)
                 self.assertEqual(first_post.author, PostPagesTest.post.author)
+                self.assertEqual(first_post.image, PostPagesTest.post.image)
 
     def test_pfivate_views_show_correct_context(self):
         """Проверка, что вью функции для приватных старниц
@@ -72,6 +107,7 @@ class PostPagesTest(TestCase):
         form_fields = {
             'text': forms.fields.CharField,
             'group': forms.fields.ChoiceField,
+            'image': forms.fields.ImageField
         }
         for revers_name in PostPagesTest.private_reference.keys():
             with self.subTest(revers_name=revers_name):
@@ -87,6 +123,8 @@ class PostPagesTest(TestCase):
         response = (self.authorized_client.
                     get(reverse('posts:post_detail',
                         kwargs={'post_id': f'{PostPagesTest.post.id}'})))
+        self.assertEqual(response.context.get('posts').image,
+                         PostPagesTest.post.image)
         self.assertEqual(response.context.get('posts').text,
                          PostPagesTest.post.text)
 
@@ -112,7 +150,7 @@ class PaginatorViewsTest(TestCase):
             description='Тестовое описание группы'
         )
 
-        for i in range(settings.NUM_OF_POSTS_TEST):
+        for i in range(settings.NUM_OF_POSTS + TEST_PAG_3):
             Post.objects.create(
                 text='Тестовый текст поста',
                 author=cls.author,
@@ -133,6 +171,6 @@ class PaginatorViewsTest(TestCase):
             with self.subTest(revers_name=revers_name):
                 response = self.authorized_client.get(revers_name)
                 self.assertEqual(len(response.context['page_obj']),
-                                 settings.NUM_OF_POSTS_TEST - 3)
+                                 settings.NUM_OF_POSTS)
                 response = self.authorized_client.get(revers_name + '?page=2')
                 self.assertEqual(len(response.context['page_obj']), TEST_PAG_3)

@@ -1,44 +1,81 @@
 {% extends 'base.html' %}
+{% load thumbnail %}
+{% load user_filters %}
 {% load static %}
 {% block title %}Пост {{ posts.text|truncatechars:30 }}{% endblock %}
 {% block content %}
-  <div class="row">
-    <aside class="col-12 col-md-3">
-      <ul class="list-group list-group-flush">
-        <li class="list-group-item">
-          Дата публикации: {{posts.pub_date|date:"d E Y"}}
-        </li>
-        <!-- если у поста есть группа -->
-        <li class="list-group-item">
-          Группа: {{posts.group.title}}
-          {% if posts.group %}
-            <a href="{% url 'posts:group_list' posts.group.slug %}">
-              все записи группы
+  <div class="container py-5">
+    <div class="row">
+      <aside class="col-12 col-md-3">
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item">
+            Дата публикации: {{posts.pub_date|date:"d E Y"}}
+          </li>
+          <!-- если у поста есть группа -->
+          <li class="list-group-item">
+            Группа: {{posts.group.title}}
+            {% if posts.group %}
+              <a href="{% url 'posts:group_list' posts.group.slug %}">
+                все записи группы
+              </a>
+            {% endif %}
+          </li>
+          <li class="list-group-item">
+            Автор: {{posts.author.get_full_name}} {{posts.author}}
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            Всего постов автора:  <span >{{posts.author.posts.count}}</span>
+          </li>
+          <li class="list-group-item">
+            <a href="{% url 'posts:profile' posts.author.username %}">
+              все посты пользователя
             </a>
-          {% endif %}
-        </li>
-        <li class="list-group-item">
-          Автор: {{posts.author.get_full_name}} {{posts.author}}
-        </li>
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          Всего постов автора:  <span >{{posts.author.posts.count}}</span>
-        </li>
-        <li class="list-group-item">
-          <a href="{% url 'posts:profile' posts.author.username %}">
-            все посты пользователя
-          </a>
-        </li>
-      </ul>
-    </aside>
-    <article class="col-12 col-md-9">
-      <p>
-        {{posts.text|linebreaks}}
-      </p>
-      {% if  posts.author != request.user %}
+          </li>
+        </ul>
+      </aside>
+      <article class="col-12 col-md-9">
+        {% thumbnail posts.image "687x242" crop="center" upscale=True as im %}
+          <img class="card-img my-2" src="{{ im.url }}">
+        {% endthumbnail %}
+        <p>
+          {{posts.text|linebreaks}}
+        </p>
+        {% if  posts.author != request.user %}
 
-      {% else%}
-        <a class="btn btn-primary" href="{% url 'posts:post_edit' posts.id %}">Редактировать пост</a>
-      {% endif %}
-    </article>
+        {% else%}
+          <a class="btn btn-primary" href="{% url 'posts:post_edit' posts.id %}">Редактировать пост</a>
+        {% endif %}
+        {% if user.is_authenticated %}
+          <div class="card my-4">
+            <h5 class="card-header">Добавить комментарий:</h5>
+            <div class="card-body">
+              <form method="post" action="{% url 'posts:add_comment' posts.id %}">
+                {% csrf_token %}
+                <div class="form-group mb-2">
+                  {{ form.text|addclass:"form-control" }}
+                </div>
+                <button type="submit" class="btn btn-primary">Отправить</button>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+
+        {% for comment in comments %}
+          <div class="media mb-4">
+            <div class="media-body">
+              <h5 class="mt-0">
+                <a href="{% url 'posts:profile' comment.author.username %}">
+                  {{ comment.author.username }}
+                </a>
+              </h5>
+              <p>
+                {{ comment.text }}
+              </p>
+            </div>
+          </div>
+        {% endfor %}
+      </article>
+    </div>
   </div>
+  <br>
 {% endblock %}

@@ -27,16 +27,16 @@
                   <div class="alert alert-danger">
                     {{ error|escape }}
                   </div>
-               {% endfor %}
-             {% endfor %}
-             {% for error in form.non_field_errors %}
-              <div class="alert alert-danger">
-                {{ error|escape }}
-              </div>
-             {% endfor %}
+                {% endfor %}
+              {% endfor %}
+              {% for error in form.non_field_errors %}
+                <div class="alert alert-danger">
+                  {{ error|escape }}
+                </div>
+              {% endfor %}
             {% endif %}
 
-            <form method="post" action="{{ request.get_full_path }}">
+            <form method="post" enctype="multipart/form-data">
               {% csrf_token %}
               {% for field in form %}
                 <div class="form-group row my-3"
